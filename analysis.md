@@ -1,6 +1,6 @@
 1. What is the top 5 counties that has the highest proficiency rate in the Regents Exam (Geometry) in 2024?
 
-```postgresql
+```sql
 SELECT "ENTITY_NAME", "PER_PROF"
 FROM "Annual_Regents_Exams"
 WHERE ("ENTITY_NAME" LIKE '%County') AND ("SUBGROUP_NAME" = 'All Students')
@@ -20,7 +20,7 @@ Result:
 
 What about the reverse?
 
-```postgresql
+```sql
 SELECT "ENTITY_NAME", "PER_PROF"
 FROM "Annual_Regents_Exams"
 WHERE ("ENTITY_NAME" LIKE '%County') AND ("SUBGROUP_NAME" = 'All Students')
@@ -42,7 +42,7 @@ It seems like low proficiency rates in Geometry is concentrated around NYC... Th
 
 2. How has proficiency rate in the Regents Exam (Geometry) changed from 2023 to 2024 in counties covering NYC?
 
-```postgresql
+```sql
 -- Create separate tables for 2023 and 2024
 WITH table_2023 AS (
 	SELECT "ENTITY_NAME", "YEAR", "PER_PROF"
@@ -74,3 +74,7 @@ Result:
 | **KINGS County**              | 40                | 43                | 3              |
 | **NEW YORK County**           | 45                | 48                | 3              |
 | **RICHMOND County**           | 39                | 41                | 2              |
+
+Overall, all counties around NYC have seen an increase in the proficiency rate for Geometry in the Regents Exam, compared to the previous year.
+
+3. Does the proficiency rate in Geometry is representative of other subjects (in 2024)?
