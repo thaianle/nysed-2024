@@ -51,3 +51,38 @@ $$) AS ct ("ENTITY_NAME" VARCHAR, "Regents_Common_Core_Algebra_I" VARCHAR, "Rege
 ORDER BY "ENTITY_NAME";
 
 -- Need to do crosstab because the subject names are aggregated in a shared column and I want to compare the subject proficiency rates together side by side
+
+-- 4. How does the proficiency rate in Common Core Geometry in 2024 compare to the proficiency rate of Math Regents Exams in the cohort entering during 2019-2020? 
+
+WITH agg_cohort AS (-- Aggregated cohort tested in Regents Math (incoming class 2019-20)
+	SELECT "ENTITY_NAME", SUM("COHORT_COUNT"::INTEGER) - SUM("NUM_EXEMPT_NTEST"::INTEGER) AS agg_cohort_tested
+	FROM "Total_Cohort_Regents_Exams"
+	WHERE ("ENTITY_NAME" IN ('NYC Public Schools County', 'NEW YORK County', 'KINGS County', 'BRONX County', 'QUEENS County', 'RICHMOND County'))
+		AND ("SUBGROUP_NAME" = 'All Students') AND ("PROF_%COHORT" NOT LIKE 's') AND ("SUBJECT" = 'MATH')
+	GROUP BY "ENTITY_NAME"
+),
+
+agg_prof AS (-- Aggregated proficient students in Regents Math (incoming class 2019-20)
+	SELECT "ENTITY_NAME", SUM("PROF_COUNT"::INTEGER) AS agg_prof_count
+	FROM "Total_Cohort_Regents_Exams"
+	WHERE ("ENTITY_NAME" IN ('NYC Public Schools County', 'NEW YORK County', 'KINGS County', 'BRONX County', 'QUEENS County', 'RICHMOND County'))
+		AND ("SUBGROUP_NAME" = 'All Students') AND ("PROF_%COHORT" NOT LIKE 's') AND ("SUBJECT" = 'MATH')
+	GROUP BY "ENTITY_NAME"
+),
+
+geom_2024 AS (-- Proficiency rate in Common Core Geometry (2024)
+	SELECT "ENTITY_NAME", "PER_PROF"
+			FROM "Annual_Regents_Exams"
+			WHERE ("ENTITY_NAME" IN ('NYC Public Schools County', 'NEW YORK County', 'KINGS County', 'BRONX County', 'QUEENS County', 'RICHMOND County'))
+				AND ("SUBJECT" = 'Regents Common Core Geometry') AND ("SUBGROUP_NAME" = 'All Students') AND ("PER_PROF" NOT LIKE 's') AND ("YEAR" = 2024)
+)
+
+/*
+First, calculate the aggregated proficiency rate in Regents Math (incoming class 2019-20).
+Then, compare them with the proficiency rate in Common Core Geometry (2024).
+*/
+SELECT c."ENTITY_NAME", c.agg_cohort_tested, p.agg_prof_count,
+	ROUND((p.agg_prof_count::NUMERIC / c.agg_cohort_tested::NUMERIC * 100), 0) AS prof_math_incoming_2019_20,
+	g."PER_PROF"::NUMERIC AS prof_geom_in_2024
+FROM agg_cohort c LEFT JOIN agg_prof p ON c."ENTITY_NAME" = p."ENTITY_NAME"
+LEFT JOIN geom_2024 g ON c."ENTITY_NAME" = g."ENTITY_NAME"
