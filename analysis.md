@@ -259,3 +259,54 @@ Result:
 Of the 15 top schools, nearly half of them are located in Nassau County (county code 28) and Westchester County (county code 66). These are populous counties located in the New York metropolitan area.
 
 Another interesting insight is that although New York City and its directly surrounding counties associated with NYC boroughs (county code starting with 3) has poor proficiency rates in Geometry overall, there are still some high-performing schools. These schools are scattered in New York County (code 31), Kings County (code 33), Queens County (code 34), and Richmond County (code 35).
+
+### 6. In each subject of the 2024 Regents Exams, what is the difference in proficiency rates between the top 10 schools combined and the bottom 10 schools combined? 
+(Work in progress)
+
+```sql
+WITH nyc_area_schools AS (-- take the statistics for all students, which schools have >= 100 students tested
+	SELECT "ENTITY_NAME", "SUBJECT", "TESTED", "NUM_PROF", "PER_PROF",
+		ROW_NUMBER() OVER(PARTITION BY "SUBJECT" ORDER BY "PER_PROF"::NUMERIC DESC) AS prof_ranking_top,
+		ROW_NUMBER() OVER(PARTITION BY "SUBJECT" ORDER BY "PER_PROF"::NUMERIC) AS prof_ranking_bottom
+	FROM "Annual_Regents_Exams"
+	WHERE ("SUBGROUP_NAME" = 'All Students') AND ("YEAR" = 2024) AND ("PER_PROF" NOT LIKE 's')
+		AND ("ENTITY_CD" NOT LIKE '%0000') AND ("ENTITY_NAME" NOT LIKE '%Category%')
+		AND ("ENTITY_NAME" NOT LIKE 'All Public Schools') AND ("TESTED"::NUMERIC >= 100)
+		AND (SUBSTRING("ENTITY_CD", 1, 1) = '3')
+),
+-- I used ROW_NUMBER because there may be many schools with the same score; just use one school as the representative
+-- Filter only for top 10 schools and bottom 10 schools in every subject
+top_10 AS (
+	SELECT "SUBJECT",
+		ROUND((SUM("NUM_PROF"::NUMERIC) / SUM("TESTED"::NUMERIC) * 100), 2) AS agg_prof_rate
+	FROM nyc_area_schools
+	WHERE (prof_ranking_top BETWEEN 1 AND 10)
+	GROUP BY "SUBJECT"
+),
+bottom_10 AS (
+	SELECT "SUBJECT",
+		ROUND((SUM("NUM_PROF"::NUMERIC) / SUM("TESTED"::NUMERIC) * 100), 2) AS agg_prof_rate
+	FROM nyc_area_schools
+	WHERE (prof_ranking_bottom BETWEEN 1 AND 10)
+	GROUP BY "SUBJECT"
+)
+
+SELECT t."SUBJECT", t.agg_prof_rate AS top_10_prof_rate, b.agg_prof_rate AS bottom_10_prof_rate,
+	t.agg_prof_rate - b.agg_prof_rate AS prof_gap
+FROM top_10 t INNER JOIN bottom_10 b ON t."SUBJECT" = b."SUBJECT"
+ORDER BY prof_gap DESC;
+```
+Result:
+| **SUBJECT**                                  | **top_10_prof_rate** | **bottom_10_prof_rate** | **prof_gap** |
+|----------------------------------------------|:--------------------:|:-----------------------:|:------------:|
+| **Regents Common Core Geometry**             | 97.69                | 3.45                    | 94.24        |
+| **Regents Algebra I**                        | 100.00               | 11.16                   | 88.84        |
+| **Regents Common Core Algebra II**           | 99.33                | 10.88                   | 88.45        |
+| **Regents Phy Set/Chemistry**                | 96.41                | 9.36                    | 87.05        |
+| **Regents Living Environment**               | 99.95                | 14.23                   | 85.72        |
+| **Regents NF Global History**                | 99.81                | 27.83                   | 71.98        |
+| **Regents Phy Set/Earth Sci**                | 93.14                | 21.97                   | 71.17        |
+| **Regents Common Core English Language Art** | 99.92                | 29.47                   | 70.45        |
+| **Regents US History&Gov't (Framework)**     | 99.76                | 30.89                   | 68.87        |
+| **Regents Phy Set/Physics**                  | 93.83                | 47.79                   | 46.04        |
+| **Regents Common Core Algebra I**            | 56.98                | 12.97                   | 44.01        |
