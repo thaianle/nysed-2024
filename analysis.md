@@ -2,7 +2,7 @@
 
 ## Analysis File with Comments
 
-### 1. What is the top 5 counties that has the highest and lowest proficiency rate in the Regents Exam (Geometry) in 2024?
+### 1. What are the top 5 counties that has the highest and lowest proficiency rate in the Regents Exam (Geometry) in 2024?
 
 ```sql
 -- Top 5 counties with highest proficiency rate
@@ -260,30 +260,35 @@ Of the 15 top schools, nearly half of them are located in Nassau County (county 
 
 Another interesting insight is that although New York City and its directly surrounding counties associated with NYC boroughs (county code starting with 3) has poor proficiency rates in Geometry overall, there are still some high-performing schools. These schools are scattered in New York County (code 31), Kings County (code 33), Queens County (code 34), and Richmond County (code 35).
 
-### 6. In each subject of the 2024 Regents Exams, what is the difference in proficiency rates between the top 10 schools combined and the bottom 10 schools combined? 
-(Work in progress)
+### 6. What is the proficiency gap between between high-performing and under-performing schools for different types of exams for 2024 in the New York City area?
+
+I chose the difference between proficiency rates of the top 10 schools combined and the bottom 10 schools combined as my "proficiency gap" metric.
+I have also filtered out for schools in the New York City area (the entity code starts with 3)
 
 ```sql
-WITH nyc_area_schools AS (-- take the statistics for all students, which schools have >= 100 students tested
+WITH nyc_area_schools AS (-- Restrict to NYC schools having >= 100 students tested
 	SELECT "ENTITY_NAME", "SUBJECT", "TESTED", "NUM_PROF", "PER_PROF",
-		ROW_NUMBER() OVER(PARTITION BY "SUBJECT" ORDER BY "PER_PROF"::NUMERIC DESC) AS prof_ranking_top,
-		ROW_NUMBER() OVER(PARTITION BY "SUBJECT" ORDER BY "PER_PROF"::NUMERIC) AS prof_ranking_bottom
+		ROW_NUMBER() OVER(PARTITION BY "SUBJECT" ORDER BY "PER_PROF"::NUMERIC DESC, "TESTED"::NUMERIC DESC) AS prof_ranking_top,
+		ROW_NUMBER() OVER(PARTITION BY "SUBJECT" ORDER BY "PER_PROF"::NUMERIC, "TESTED"::NUMERIC) AS prof_ranking_bottom
 	FROM "Annual_Regents_Exams"
 	WHERE ("SUBGROUP_NAME" = 'All Students') AND ("YEAR" = 2024) AND ("PER_PROF" NOT LIKE 's')
 		AND ("ENTITY_CD" NOT LIKE '%0000') AND ("ENTITY_NAME" NOT LIKE '%Category%')
 		AND ("ENTITY_NAME" NOT LIKE 'All Public Schools') AND ("TESTED"::NUMERIC >= 100)
-		AND (SUBSTRING("ENTITY_CD", 1, 1) = '3')
+		AND (SUBSTRING("ENTITY_CD", 1, 1) = '3') -- Schools in the NYC area have their entity code starting with 3
 ),
--- I used ROW_NUMBER because there may be many schools with the same score; just use one school as the representative
--- Filter only for top 10 schools and bottom 10 schools in every subject
-top_10 AS (
+/*
+I used the window function ROW_NUMBER because there may be many schools with the same score; I may not use every school with the same rank as representatives
+to ensure that exactly 10 schools are counted for each top 10/bottom 10 group.
+In case of a tie, I used the school(s) with more students tested (for the top 10) or fewer students tested (for the bottom 10) for a conservative estimate of the gap.
+*/
+top_10 AS (-- Aggregated proficiency rate for top 10 schools
 	SELECT "SUBJECT",
 		ROUND((SUM("NUM_PROF"::NUMERIC) / SUM("TESTED"::NUMERIC) * 100), 2) AS agg_prof_rate
 	FROM nyc_area_schools
 	WHERE (prof_ranking_top BETWEEN 1 AND 10)
 	GROUP BY "SUBJECT"
 ),
-bottom_10 AS (
+bottom_10 AS (-- Aggregated proficiency rate for bottom 10 schools
 	SELECT "SUBJECT",
 		ROUND((SUM("NUM_PROF"::NUMERIC) / SUM("TESTED"::NUMERIC) * 100), 2) AS agg_prof_rate
 	FROM nyc_area_schools
@@ -306,7 +311,13 @@ Result:
 | **Regents Living Environment**               | 99.95                | 14.23                   | 85.72        |
 | **Regents NF Global History**                | 99.81                | 27.83                   | 71.98        |
 | **Regents Phy Set/Earth Sci**                | 93.14                | 21.97                   | 71.17        |
-| **Regents Common Core English Language Art** | 99.92                | 29.47                   | 70.45        |
-| **Regents US History&Gov't (Framework)**     | 99.76                | 30.89                   | 68.87        |
+| **Regents Common Core English Language Art** | 99.91                | 29.47                   | 70.44        |
+| **Regents US History&Gov't (Framework)**     | 99.75                | 30.89                   | 68.86        |
 | **Regents Phy Set/Physics**                  | 93.83                | 47.79                   | 46.04        |
 | **Regents Common Core Algebra I**            | 56.98                | 12.97                   | 44.01        |
+
+The 2024 Regents Common Core Geometry exams, which is the main topic of interest for this analysis file, had the greatest proficiency gap of nearly 95 percentage points between the top 10 schools and the bottom 10 schools. This was mainly due to the proficiency rate for the bottom 10% being only 3.45%, further suggesting that the Geometry exam proved difficult for many students taking it. The bottom 10 schools, among other under-performing schools in the region, may have contributed to the low overall proficiency rate in the New York City and its counties sharing a direct border with NYC.
+
+The top 10 schools had near-perfect proficiency rate in almost every subject (over 90%), with the exception of Regents Common Core Algebra I with only approximately 57% proficiency rate. I am not sure if this is because of a data error, high-achieving students not opting to take Common Core Algebra I, or any other reason related to organizing the exams.
+
+For the bottom 10 schools, maths and natural sciences subjects typically have a lower proficiency rate than the social sciences. A notable exception is that Regents Physics had the highest proficiency rate in all types of Regents exams (nearly 48%), driving down the proficiency gap with the top 10 schools. 
