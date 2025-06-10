@@ -166,7 +166,6 @@ The proficiency rate in Geometry is lower than the general proficiency rate in M
 The aggregated proficiency rates in Regents Math in all regions around NYC are near average (50%), which is slightly better than that in Regents Geometry alone, but not impressive as in many other parts of New York State.
 
 ### 5. At a school level, which schools have the highest proficiency rate in Regents Common Core Geometry exams in 2024?
-(Work in progress)
 
 There are actually 58 schools that has a 100% proficiency rate in the Regents Common Core Geometry exam in 2024 (when I changed the SELECT statement in the code block below to ```SELECT COUNT("INSTITUTION_ID")```), so I decided to print out the first 10 schools listed in the dataset.
 
@@ -224,3 +223,39 @@ Result:
 | **QUEENS HS -SCIENCES-YORK COLLEGE**     | 34              | 106        | 98           |
 | **GARDEN CITY HIGH SCHOOL**              | 28              | 261        | 98           |
 | **IRVINGTON HIGH SCHOOL**                | 66              | 105        | 98           |
+
+The above list contains 15 schools in New York State having a 98% proficiency rate and above in the Regents Common Core Geometry exam in 2024. Counting the appearances of county codes in the top 15 list, we have:
+
+```sql
+WITH top_schools AS (-- Wrap the previous query in a CTE
+	SELECT "ENTITY_NAME", SUBSTRING("ENTITY_CD", 1, 2) AS county_code, "TESTED", "PER_PROF"
+	FROM "Annual_Regents_Exams"
+	WHERE ("SUBGROUP_NAME" = 'All Students') AND ("SUBJECT" LIKE '%Geometry%') AND ("YEAR" = 2024) AND ("PER_PROF" NOT LIKE 's')
+		AND ("ENTITY_CD" NOT LIKE '%0000') AND ("ENTITY_NAME" NOT LIKE '%Category%') AND ("PER_PROF"::NUMERIC >= 98)
+		AND ("TESTED"::NUMERIC >= 100)
+	ORDER BY "PER_PROF"::NUMERIC DESC
+)
+
+SELECT county_code, COUNT(county_code) AS count
+FROM top_schools
+GROUP BY county_code
+ORDER BY count DESC, county_code::NUMERIC;
+```
+
+Result:
+| **county_code** | **count** |
+|:---------------:|:---------:|
+| **28**          | 4         |
+| **66**          | 3         |
+| **26**          | 1         |
+| **31**          | 1         |
+| **33**          | 1         |
+| **34**          | 1         |
+| **35**          | 1         |
+| **42**          | 1         |
+| **49**          | 1         |
+| **58**          | 1         |
+
+Of the 15 top schools, nearly half of them are located in Nassau County (county code 28) and Westchester County (county code 66). These are populous counties located in the New York metropolitan area.
+
+Another interesting insight is that although New York City and its directly surrounding counties associated with NYC boroughs (county code starting with 3) has poor proficiency rates in Geometry overall, there are still some high-performing schools. These schools are scattered in New York County (code 31), Kings County (code 33), Queens County (code 34), and Richmond County (code 35).
