@@ -1,6 +1,6 @@
 # NYSED School Report Card Project
 
-## Analysis File with Comments
+## Part 1: Exploratory Data Analysis in SQL
 
 ### 1. What are the top 5 counties that has the highest and lowest proficiency rate in the Regents Exam (Geometry) in 2024?
 
