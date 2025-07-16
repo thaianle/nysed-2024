@@ -68,6 +68,12 @@ accountability_status AS (
 SELECT "INSTITUTION_ID", "OVERALL_STATUS"
 FROM "Accountability_Status"
 WHERE ("YEAR" = '2024') AND ("OVERALL_STATUS" != 'Target District')
+),
+
+need_to_resource AS (
+SELECT "INSTITUTION_ID", "NEEDS_INDEX_DESCRIPTION"
+FROM "BOCES_and_N_RC"
+WHERE ("YEAR" = '2024') AND (RIGHT("ENTITY_CD", 4) != '0000')
 )
 
 SELECT ins."INSTITUTION_ID", ins."ENTITY_CD", ins."ENTITY_NAME",
@@ -75,7 +81,7 @@ SELECT ins."INSTITUTION_ID", ins."ENTITY_CD", ins."ENTITY_NAME",
 	grad."GRAD_COUNT", grad."COHORT_COUNT", part."ELA_P_RATE", part."MATH_P_RATE",
 	expd."PUPIL_COUNT_TOT", expd."FED_STATE_LOCAL_EXP",
 	inet."NUM_TEACH", inet."NUM_TEACH_INEXP", ocert."NUM_TEACH_OC", ocert."NUM_OUT_CERT",
-	acc."OVERALL_STATUS"
+	acc."OVERALL_STATUS", nrc."NEEDS_INDEX_DESCRIPTION"
 
 FROM institutions ins
 INNER JOIN core_and_weighted cw ON ins."INSTITUTION_ID" = cw."INSTITUTION_ID"
@@ -86,3 +92,4 @@ INNER JOIN expenditures_per_pupil expd ON ins."INSTITUTION_ID" = expd."INSTITUTI
 INNER JOIN inexp_teachers inet ON ins."INSTITUTION_ID" = inet."INSTITUTION_ID"
 INNER JOIN teacher_out_cert ocert ON ins."INSTITUTION_ID" = ocert."INSTITUTION_ID"
 INNER JOIN accountability_status acc ON ins."INSTITUTION_ID" = acc."INSTITUTION_ID"
+INNER JOIN need_to_resource nrc ON ins."INSTITUTION_ID" = nrc."INSTITUTION_ID"
